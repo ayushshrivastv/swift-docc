@@ -5601,3 +5601,45 @@ extension String {
             .joined(separator: "\n")
     }
 }
+//added test coverage to verify warning message and details
+func testWarnsOnMultipleRootPagesDetails() throws {
+    
+    let (bundle, context) = try testBundleAndContext(copying: "TestBundle") { url in
+        try """
+        # Additional Root
+        @TechnologyRoot
+        Additional root page
+        """.write(
+            to: url.appendingPathComponent("additional-root.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+    }
+    
+    let warning: Problem = try XCTUnwrap(
+        context.problems.first {
+            $0.diagnostic.identifier == "org.swift.docc.MultipleRootPages"
+        }
+    )
+   
+    XCTAssertEqual(warning.diagnostic.severity, .warning)
+    XCTAssertEqual(
+        warning.diagnostic.summary,
+        "Found 2 root pages in documentation"
+    )
+    XCTAssertTrue(
+        warning.diagnostic.explanation?.contains("Documentation should have exactly one root page")
+            ?? false,
+        "Warning only one root page is allowed"
+    )
+    XCTAssertTrue(
+        warning.diagnostic.explanation?.contains("Primary:") ?? false,
+        "Warning identify the primary root"
+    )
+    XCTAssertTrue(
+        warning.diagnostic.explanation?.contains("Additional:") ?? false,
+        "Warning list additional roots"
+    )
+}
+
+
