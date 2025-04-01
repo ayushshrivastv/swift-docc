@@ -297,6 +297,8 @@ class DocumentationContext_RootPageTests: XCTestCase {
         XCTAssertTrue(mixedRootsWarning?.diagnostic.explanation?.contains("symbol graph modules") ?? false)
         XCTAssertTrue(mixedRootsWarning?.diagnostic.explanation?.contains("manual technology roots") ?? false)
     }
+//Added test for multiple technology roots
+//this test checks if the bundle has multiple teechnology roots and if it emits a warning
 
     func testMultipleTechnologyRootsWarning() throws {
         //create a test bundle with multiple manual technology roots
@@ -357,3 +359,5 @@ class DocumentationContext_RootPageTests: XCTestCase {
         XCTAssertTrue(multipleTechRootsWarning?.diagnostic.explanation?.contains("APIReference") ?? false)
     }
 }
+
+//having warning about unexpected input would help swift developers notice issue correct the input they are passing to DocC or other miss configuration in the project

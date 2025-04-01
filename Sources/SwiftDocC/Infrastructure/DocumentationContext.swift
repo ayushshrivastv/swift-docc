@@ -3198,7 +3198,9 @@ extension DocumentationContext {
             return Problem(diagnostic: Diagnostic(source: source, severity: .information, range: nil, identifier: "org.swift.docc.SymbolNotCurated", summary: "You haven't curated \(node.reference.absoluteString.singleQuoted)"), possibleSolutions: [Solution(summary: "Add a link to \(node.reference.absoluteString.singleQuoted) from a Topics group of another documentation node.", replacements: [])])
         }
         diagnosticEngine.emit(problems)
+
 // Check for multiple root page warnings
+
         warnAboutMultipleRootPages()
     }
 
@@ -3276,7 +3278,7 @@ extension DocumentationContext {
             }
             return false
         }
-        
+
         // Only warn about modules that are not organized under technology roots
         let freestandingModules = moduleRoots.filter { !modulesUnderTechnologyRoots.contains($0) }
 
@@ -3338,6 +3340,8 @@ extension DocumentationContext {
         }
 
         return problems
+
+
     }
 
     func analyzeAlternateRepresentations() {
