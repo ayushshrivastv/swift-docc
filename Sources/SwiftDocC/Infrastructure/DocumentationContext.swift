@@ -3260,11 +3260,31 @@ extension DocumentationContext {
             return false
         }
 
+        // Check if modules are properly organized under technology roots
+        let modulesUnderTechnologyRoots = moduleRoots.filter { moduleRoot in
+            // Check if there's a path to a technology root
+            if let pathToRoot = shortestFinitePath(to: moduleRoot) {
+                // Check if any node in the path has a @TechnologyRoot directive
+                return pathToRoot.contains { reference in
+                    if let entity = try? entity(with: reference),
+                       let metadata = entity.metadata,
+                       metadata.technologyRoot != nil {
+                        return true
+                    }
+                    return false
+                }
+            }
+            return false
+        }
+        
+        // Only warn about modules that are not organized under technology roots
+        let freestandingModules = moduleRoots.filter { !modulesUnderTechnologyRoots.contains($0) }
+
         //different warning scenarios
 
         //multiple symbol graph modules
-        if moduleRoots.count > 1 {
-            let rootList = moduleRoots.map { $0.lastPathComponent.singleQuoted }.joined(
+        if freestandingModules.count > 1 {
+            let rootList = freestandingModules.map { $0.lastPathComponent.singleQuoted }.joined(
                 separator: ", ")
             let problem = Problem(
                 diagnostic: Diagnostic(
@@ -3280,8 +3300,8 @@ extension DocumentationContext {
         }
 
         //symbol graph module and manual technology root
-        if !moduleRoots.isEmpty && !technologyRoots.isEmpty {
-            let moduleList = moduleRoots.map { $0.lastPathComponent.singleQuoted }.joined(
+        if !freestandingModules.isEmpty && !technologyRoots.isEmpty {
+            let moduleList = freestandingModules.map { $0.lastPathComponent.singleQuoted }.joined(
                 separator: ", ")
             let technologyList = technologyRoots.map { $0.lastPathComponent.singleQuoted }.joined(
                 separator: ", ")
