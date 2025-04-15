@@ -358,6 +358,119 @@ class DocumentationContext_RootPageTests: XCTestCase {
         XCTAssertTrue(multipleTechRootsWarning?.diagnostic.explanation?.contains("GettingStarted") ?? false)
         XCTAssertTrue(multipleTechRootsWarning?.diagnostic.explanation?.contains("APIReference") ?? false)
     }
+
+    func testMultipleRootPagesWarning() throws {
+        let (_, context) = try loadBundle(catalog:
+            Folder(name: "test.docc", content: [
+                // First root page
+                TextFile(name: "FirstRoot.md", utf8Content: """
+                # First Root
+                @Metadata {
+                   @TechnologyRoot
+                }
+                First root page.
+                """),
+                
+                // Second root page
+                TextFile(name: "SecondRoot.md", utf8Content: """
+                # Second Root
+                @Metadata {
+                   @TechnologyRoot
+                }
+                Second root page.
+                """),
+                
+                // Third root page
+                TextFile(name: "ThirdRoot.md", utf8Content: """
+                # Third Root
+                @Metadata {
+                   @TechnologyRoot
+                }
+                Third root page.
+                """),
+                
+                InfoPlist(displayName: "TestBundle", identifier: "com.test.example"),
+            ])
+        )
+        
+        // There should be warnings about multiple root pages
+        let multipleRootPagesWarnings = context.problems.filter { 
+            $0.diagnostic.identifier == "org.swift.docc.MultipleRootPages" 
+        }
+        
+        // We should have 2 warnings (for the second and third root pages)
+        XCTAssertEqual(multipleRootPagesWarnings.count, 2)
+        
+        // First warning should be for SecondRoot
+        XCTAssertEqual(multipleRootPagesWarnings[0].diagnostic.source?.lastPathComponent, "SecondRoot.md")
+        XCTAssertEqual(multipleRootPagesWarnings[0].diagnostic.summary, "Documentation contains more than one root page")
+        XCTAssertEqual(multipleRootPagesWarnings[0].diagnostic.range?.lowerBound.line, 3)
+        XCTAssertEqual(multipleRootPagesWarnings[0].possibleSolutions.count, 1)
+        
+        // Second warning should be for ThirdRoot
+        XCTAssertEqual(multipleRootPagesWarnings[1].diagnostic.source?.lastPathComponent, "ThirdRoot.md")
+        XCTAssertEqual(multipleRootPagesWarnings[1].diagnostic.summary, "Documentation contains more than one root page")
+        XCTAssertEqual(multipleRootPagesWarnings[1].diagnostic.range?.lowerBound.line, 3)
+        XCTAssertEqual(multipleRootPagesWarnings[1].possibleSolutions.count, 1)
+    }
+    
+    func testMultipleRootModulesWarning() throws {
+        let tempURL = try createTemporaryDirectory()
+        let bundleURL = tempURL.appendingPathComponent("test.docc")
+        try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
+
+        // Create two symbol graph files for different modules
+        let module1GraphURL = bundleURL.appendingPathComponent("Module1.symbols.json")
+        let module2GraphURL = bundleURL.appendingPathComponent("Module2.symbols.json")
+
+        // Symbol graph content for Module1
+        let module1Graph = makeSymbolGraph(
+            moduleName: "Module1",
+            symbols: [],
+            relationships: []
+        )
+
+        // Symbol graph content for Module2
+        let module2Graph = makeSymbolGraph(
+            moduleName: "Module2",
+            symbols: [],
+            relationships: []
+        )
+
+        // Write symbol graphs to files
+        try JSONEncoder().encode(module1Graph).write(to: module1GraphURL)
+        try JSONEncoder().encode(module2Graph).write(to: module2GraphURL)
+
+        // Create the Info.plist file
+        let infoPlistURL = bundleURL.appendingPathComponent("Info.plist")
+        let infoPlist = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>CFBundleIdentifier</key>
+                <string>org.swift.docc.example</string>
+                <key>CFBundleName</key>
+                <string>Test Bundle</string>
+                <key>CFBundleVersion</key>
+                <string>1.0.0</string>
+            </dict>
+            </plist>
+            """
+        try infoPlist.write(to: infoPlistURL, atomically: true, encoding: .utf8)
+
+        // Load the bundle
+        let (_, _, context) = try loadBundle(from: bundleURL)
+
+        // Check for the warning about multiple root modules
+        let multipleRootModulesWarnings = context.problems.filter { 
+            $0.diagnostic.identifier == "org.swift.docc.MultipleRootModules" 
+        }
+        
+        XCTAssertEqual(multipleRootModulesWarnings.count, 1)
+        XCTAssertEqual(multipleRootModulesWarnings[0].diagnostic.summary, "Documentation contains symbol graphs for multiple main modules: Module1, Module2")
+        XCTAssertEqual(multipleRootModulesWarnings[0].diagnostic.explanation, "Having multiple root modules may lead to unexpected behavior when using DocC.")
+    }
 }
 
 //having warning about unexpected input would help swift developers notice issue correct the input they are passing to DocC or other miss configuration in the project

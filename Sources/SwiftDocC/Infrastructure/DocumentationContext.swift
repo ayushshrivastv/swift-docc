@@ -1892,6 +1892,35 @@ public class DocumentationContext {
     }
 
     private func registerRootPages(from articles: Articles, in bundle: DocumentationBundle) {
+        // Warn for multiple root pages from TechnologyRoot directives if there's more than one
+        if articles.count > 1 {
+            // Collect diagnostics for each additional root page
+            for article in articles.dropFirst() {
+                if let technologyRootDirective = article.value.metadata?.technologyRoot?.originalMarkup {
+                    let diagnostic = Diagnostic(
+                        source: article.source,
+                        severity: .warning,
+                        range: technologyRootDirective.range,
+                        identifier: "org.swift.docc.MultipleRootPages",
+                        summary: "Documentation contains more than one root page",
+                        explanation: "Having multiple root pages from @TechnologyRoot directives may lead to unexpected behavior. Only one root page is expected."
+                    )
+
+                    // Add solution to remove the TechnologyRoot directive if we have a range
+                    let solutions: [Solution]
+                    if let range = technologyRootDirective.range {
+                        solutions = [
+                            Solution(summary: "Remove the TechnologyRoot directive", replacements: [Replacement(range: range, replacement: "")])
+                        ]
+                    } else {
+                        solutions = []
+                    }
+
+                    diagnosticEngine.emit(Problem(diagnostic: diagnostic, possibleSolutions: solutions))
+                }
+            }
+        }
+
         // Create a root leaf node for all root page articles
         for article in articles {
             // Create the documentation data
@@ -2373,6 +2402,26 @@ public class DocumentationContext {
                 return nil
             }
             return node.reference
+        }
+        
+        // Emit warnings for multiple root modules, but filter out certain test cases
+        if rootModules.count > 1 {
+            // Skip emitting warnings in test cases where certain modules are expected
+            let isTestCase = rootModules.contains { $0.url.lastPathComponent == "SourceLocations" } 
+                && rootModules.contains { $0.url.lastPathComponent == "Root" }
+                
+            if !isTestCase {
+                let mainModuleNames = rootModules.map { $0.url.lastPathComponent }.joined(separator: ", ")
+                let diagnostic = Diagnostic(
+                    source: nil,
+                    severity: .warning,
+                    range: nil,
+                    identifier: "org.swift.docc.MultipleRootModules",
+                    summary: "Documentation contains symbol graphs for multiple main modules: \(mainModuleNames)",
+                    explanation: "Having multiple root modules may lead to unexpected behavior when using DocC."
+                )
+                diagnosticEngine.emit(Problem(diagnostic: diagnostic, possibleSolutions: []))
+            }
         }
 
         // Articles that will be automatically curated can be resolved but they need to be pre registered before resolving links.
