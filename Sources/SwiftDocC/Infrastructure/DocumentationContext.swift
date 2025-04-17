@@ -2411,6 +2411,7 @@ public class DocumentationContext {
                 && rootModules.contains { $0.url.lastPathComponent == "Root" }
                 
             if !isTestCase {
+                // Sort module names to ensure consistent warning message
                 let mainModuleNames = rootModules.map { $0.url.lastPathComponent }.sorted().joined(separator: ", ")
                 let diagnostic = Diagnostic(
                     source: nil,

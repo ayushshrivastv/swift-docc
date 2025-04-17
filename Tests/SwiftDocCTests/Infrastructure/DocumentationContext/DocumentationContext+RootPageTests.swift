@@ -358,7 +358,6 @@ class DocumentationContext_RootPageTests: XCTestCase {
     func testMultipleRootPagesWarning() throws {
         let (_, context) = try loadBundle(catalog:
             Folder(name: "test.docc", content: [
-                // First root page
                 TextFile(name: "FirstRoot.md", utf8Content: """
                 # First Root
                 @Metadata {
@@ -367,7 +366,6 @@ class DocumentationContext_RootPageTests: XCTestCase {
                 First root page.
                 """),
                 
-                // Second root page
                 TextFile(name: "SecondRoot.md", utf8Content: """
                 # Second Root
                 @Metadata {
@@ -376,7 +374,6 @@ class DocumentationContext_RootPageTests: XCTestCase {
                 Second root page.
                 """),
                 
-                // Third root page
                 TextFile(name: "ThirdRoot.md", utf8Content: """
                 # Third Root
                 @Metadata {
@@ -457,14 +454,12 @@ class DocumentationContext_RootPageTests: XCTestCase {
         }
         
         XCTAssertEqual(multipleRootModulesWarnings.count, 1)
-        
         // Check that both module names are present in the warning message, regardless of order
         let warningMessage = multipleRootModulesWarnings[0].diagnostic.summary
         XCTAssertTrue(warningMessage.contains("Module1") && warningMessage.contains("Module2"), 
                      "Warning should mention both modules")
-        XCTAssertTrue(warningMessage.contains("Documentation contains symbol graphs for multiple main modules"),
+        XCTAssertTrue(warningMessage.contains("Documentation contains symbol graphs for multiple main modules"), 
                      "Warning should have correct summary prefix")
-                     
         XCTAssertEqual(multipleRootModulesWarnings[0].diagnostic.explanation, "Having multiple root modules may lead to unexpected behavior when using DocC.")
     }
 }
