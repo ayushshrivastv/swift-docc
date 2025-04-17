@@ -2411,7 +2411,7 @@ public class DocumentationContext {
                 && rootModules.contains { $0.url.lastPathComponent == "Root" }
                 
             if !isTestCase {
-                let mainModuleNames = rootModules.map { $0.url.lastPathComponent }.joined(separator: ", ")
+                let mainModuleNames = rootModules.map { $0.url.lastPathComponent }.sorted().joined(separator: ", ")
                 let diagnostic = Diagnostic(
                     source: nil,
                     severity: .warning,
@@ -2420,7 +2420,7 @@ public class DocumentationContext {
                     summary: "Documentation contains symbol graphs for multiple main modules: \(mainModuleNames)",
                     explanation: "Having multiple root modules may lead to unexpected behavior when using DocC."
                 )
-                diagnosticEngine.emit(Problem(diagnostic: diagnostic, possibleSolutions: []))
+                diagnosticEngine.emit(Problem(diagnostic: diagnostic))
             }
         }
 

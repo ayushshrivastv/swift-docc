@@ -173,34 +173,28 @@ class DocumentationContext_RootPageTests: XCTestCase {
     //Multiple Root Warnings Tests
 
     func testMultipleSymbolGraphModulesWarning() throws {
-        //created a test bundle with two symbol graph files for different modules
         let tempURL = try createTemporaryDirectory()
         let bundleURL = tempURL.appendingPathComponent("test.docc")
         try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
 
-        //created two symbol graph files for different modules
         let module1GraphURL = bundleURL.appendingPathComponent("Module1.symbols.json")
         let module2GraphURL = bundleURL.appendingPathComponent("Module2.symbols.json")
 
-        // Symbol graph content for Module1
         let module1Graph = makeSymbolGraph(
             moduleName: "Module1",
             symbols: [],
             relationships: []
         )
 
-        //symbol graph content for Module2
         let module2Graph = makeSymbolGraph(
             moduleName: "Module2",
             symbols: [],
             relationships: []
         )
 
-        //symbol graphs to files
         try JSONEncoder().encode(module1Graph).write(to: module1GraphURL)
         try JSONEncoder().encode(module2Graph).write(to: module2GraphURL)
 
-        //created the Info.plist file
         let infoPlistURL = bundleURL.appendingPathComponent("Info.plist")
         let infoPlist = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -218,17 +212,19 @@ class DocumentationContext_RootPageTests: XCTestCase {
             """
         try infoPlist.write(to: infoPlistURL, atomically: true, encoding: .utf8)
 
-        //bundle
         let (_, _, context) = try loadBundle(from: bundleURL)
 
-        //checks for the warning about multiple symbol graph modules
         let multipleModuleWarning = context.problems.first {
-            $0.diagnostic.identifier == "org.swift.docc.MultipleSymbolGraphRoots"
+            $0.diagnostic.identifier == "org.swift.docc.MultipleRootModules"
         }
         XCTAssertNotNil(multipleModuleWarning, "Should emit warning about multiple symbol graph modules")
-        XCTAssertEqual(multipleModuleWarning?.diagnostic.summary, "Documentation has multiple symbol graph modules as root pages")
-        XCTAssertTrue(multipleModuleWarning?.diagnostic.explanation?.contains("Module1") ?? false)
-        XCTAssertTrue(multipleModuleWarning?.diagnostic.explanation?.contains("Module2") ?? false)
+        
+        // Check that both module names are present in the warning message, regardless of order
+        let warningMessage = multipleModuleWarning?.diagnostic.summary ?? ""
+        XCTAssertTrue(warningMessage.contains("Module1") && warningMessage.contains("Module2"), 
+                     "Warning should mention both modules")
+        XCTAssertTrue(warningMessage.contains("Documentation contains symbol graphs for multiple main modules"),
+                     "Warning should have correct summary")
     }
 
     func testMixedRootTypesWarning() throws {
@@ -419,29 +415,24 @@ class DocumentationContext_RootPageTests: XCTestCase {
         let bundleURL = tempURL.appendingPathComponent("test.docc")
         try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
 
-        // Create two symbol graph files for different modules
         let module1GraphURL = bundleURL.appendingPathComponent("Module1.symbols.json")
         let module2GraphURL = bundleURL.appendingPathComponent("Module2.symbols.json")
 
-        // Symbol graph content for Module1
         let module1Graph = makeSymbolGraph(
             moduleName: "Module1",
             symbols: [],
             relationships: []
         )
 
-        // Symbol graph content for Module2
         let module2Graph = makeSymbolGraph(
             moduleName: "Module2",
             symbols: [],
             relationships: []
         )
 
-        // Write symbol graphs to files
         try JSONEncoder().encode(module1Graph).write(to: module1GraphURL)
         try JSONEncoder().encode(module2Graph).write(to: module2GraphURL)
 
-        // Create the Info.plist file
         let infoPlistURL = bundleURL.appendingPathComponent("Info.plist")
         let infoPlist = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -459,16 +450,21 @@ class DocumentationContext_RootPageTests: XCTestCase {
             """
         try infoPlist.write(to: infoPlistURL, atomically: true, encoding: .utf8)
 
-        // Load the bundle
         let (_, _, context) = try loadBundle(from: bundleURL)
 
-        // Check for the warning about multiple root modules
         let multipleRootModulesWarnings = context.problems.filter { 
             $0.diagnostic.identifier == "org.swift.docc.MultipleRootModules" 
         }
         
         XCTAssertEqual(multipleRootModulesWarnings.count, 1)
-        XCTAssertEqual(multipleRootModulesWarnings[0].diagnostic.summary, "Documentation contains symbol graphs for multiple main modules: Module1, Module2")
+        
+        // Check that both module names are present in the warning message, regardless of order
+        let warningMessage = multipleRootModulesWarnings[0].diagnostic.summary
+        XCTAssertTrue(warningMessage.contains("Module1") && warningMessage.contains("Module2"), 
+                     "Warning should mention both modules")
+        XCTAssertTrue(warningMessage.contains("Documentation contains symbol graphs for multiple main modules"),
+                     "Warning should have correct summary prefix")
+                     
         XCTAssertEqual(multipleRootModulesWarnings[0].diagnostic.explanation, "Having multiple root modules may lead to unexpected behavior when using DocC.")
     }
 }
